@@ -42,43 +42,122 @@ To submit your homework:
 """
 
 
+def homepage():
+    """ Tells the user how to use this web app """
+    body = '''
+<h1>Welcome to the Calculator</h1>
+    <p>This calculator allows you to add, subtract, divide, and multiply.</p>
+    <p>To use it, enter a URL like this: http://localhost:8080/multiply/3/5</p>
+    <p>This URL will calculate 3 x 5 for you.</p>
+    <ul>Your options include:
+        <li>add</li>
+        <li>subtract</li>
+        <li>multiply</li>
+        <li>divide</li>
+    </ul>
+'''
+    return body
+
+
 def add(*args):
     """ Returns a STRING with the sum of the arguments """
 
     # TODO: Fill sum with the correct value, based on the
     # args provided.
-    sum = "0"
+    result = 0
+    try:
+        result = sum(map(int, args))
+        body = str(result)
+    except ValueError:
+        body = f"Value Error. Please enter integers as arguments. You entered: {args}." 
+    return body
 
-    return sum
+def subtract(*args):
+    """ Returns a STRING with the difference of the arguments """
+    result = 0
+    try:
+        result = list(map(int, args))
+        result = result[0] - result[1]
+        body = str(result)
+    except ValueError:
+        body = f"Value Error. Please enter integers as arguments. You entered: {args}." 
+    return body
 
-# TODO: Add functions for handling more arithmetic operations.
+def multiply(*args):
+    """ Returns a STRING with the multiplication of the arguments """
+    result = 0
+    try:
+        result = list(map(int, args))
+        result = result[0] * result[1]
+        body = str(result)
+    except ValueError:
+        body = f"Value Error. Please enter integers as arguments. You entered: {args}." 
+    return body
+
+
+def divide(*args):
+    """ Returns a STRING with the sum of the arguments """
+    result = 0
+    try:
+        result = list(map(int, args))
+        result = result[0]*1.0 / result[1]
+        body = str(result)
+    except ValueError:
+        body = f"Value Error. Please enter integers as arguments. You entered: {args}." 
+    except ZeroDivisionError:
+        body = f"Zero Division Error. Please enter a nonzero denominator. You entered: {args}."
+    return body
 
 def resolve_path(path):
     """
     Should return two values: a callable and an iterable of
     arguments.
     """
+    path = path.strip('/').split('/')
+    func_name = path[0]
+    args = path[1:]
 
-    # TODO: Provide correct values for func and args. The
-    # examples provide the correct *syntax*, but you should
-    # determine the actual values of func and args using the
-    # path.
-    func = add
-    args = ['25', '32']
+    funcs = {
+        '': homepage,
+        'add': add,
+        'subtract': subtract,
+        'multiply': multiply,
+        'divide': divide
+    }
+
+    try:
+        func = funcs[func_name]
+    except KeyError:
+        raise NameError
 
     return func, args
 
 def application(environ, start_response):
-    # TODO: Your application code from the book database
-    # work here as well! Remember that your application must
-    # invoke start_response(status, headers) and also return
-    # the body of the response in BYTE encoding.
-    #
-    # TODO (bonus): Add error handling for a user attempting
-    # to divide by zero.
-    pass
+    headers = [("Content-type", "text/html")]
+    try:
+        path = environ.get('PATH_INFO', None)
+        if path is None:
+            raise NameError
+        func, args = resolve_path(path)
+        body = func(*args)
+        status = "200 OK"
+    except NameError:
+        status = "404 Not Found"
+        body = "<h1>Not Found</h1>"
+    except ZeroDivisionError:
+        status = "500 Internal Server Errord"
+        body = "<h1>Zero Division Error</h1>"
+        print(traceback.format_exc())
+    except Exception:
+        status = "500 Internal Server Error"
+        body = "<h1>Internal Server Error</h1>"
+        print(traceback.format_exc())
+    finally:
+        headers.append(('Content-length', str(len(body))))
+        start_response(status, headers)
+        return [body.encode('utf8')]
 
 if __name__ == '__main__':
-    # TODO: Insert the same boilerplate wsgiref simple
-    # server creation that you used in the book database.
-    pass
+    from wsgiref.simple_server import make_server
+    srv = make_server('localhost', 8080, application)
+    srv.serve_forever()
